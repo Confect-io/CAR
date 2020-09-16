@@ -14,12 +14,20 @@ from adaptive_gridsampler.gridsampler import Downsampler
 from skimage.color import rgb2ycbcr
 
 
-parser = argparse.ArgumentParser(description='Content Adaptive Resampler for Image downscaling')
-parser.add_argument('--model_dir', type=str, default='./models', help='path to the pre-trained model')
-parser.add_argument('--img_dir', type=str, help='path to the HR images to be downscaled')
-parser.add_argument('--scale', type=int, help='downscale factor')
-parser.add_argument('--output_dir', type=str, help='path to store results')
-parser.add_argument('--benchmark', type=bool, default=True, help='report benchmark results')
+parser = argparse.ArgumentParser(
+    description="Content Adaptive Resampler for Image downscaling"
+)
+parser.add_argument(
+    "--model_dir", type=str, default="./models", help="path to the pre-trained model"
+)
+parser.add_argument(
+    "--img_dir", type=str, help="path to the HR images to be downscaled"
+)
+parser.add_argument("--scale", type=int, help="downscale factor")
+parser.add_argument("--output_dir", type=str, help="path to store results")
+parser.add_argument(
+    "--benchmark", type=bool, default=True, help="report benchmark results"
+)
 args = parser.parse_args()
 
 
@@ -36,8 +44,12 @@ kernel_generation_net = nn.DataParallel(kernel_generation_net, [0])
 downsampler_net = nn.DataParallel(downsampler_net, [0])
 upscale_net = nn.DataParallel(upscale_net, [0])
 
-kernel_generation_net.load_state_dict(torch.load(os.path.join(args.model_dir, '{0}x'.format(SCALE), 'kgn.pth')))
-upscale_net.load_state_dict(torch.load(os.path.join(args.model_dir, '{0}x'.format(SCALE), 'usn.pth')))
+kernel_generation_net.load_state_dict(
+    torch.load(os.path.join(args.model_dir, "{0}x".format(SCALE), "kgn.pth"))
+)
+upscale_net.load_state_dict(
+    torch.load(os.path.join(args.model_dir, "{0}x".format(SCALE), "usn.pth"))
+)
 torch.set_grad_enabled(False)
 
 
@@ -52,6 +64,7 @@ def validation(img, name, save_imgs=False, save_dir=None):
     downscaled_img = torch.round(downscaled_img * 255)
 
     reconstructed_img = upscale_net(downscaled_img / 255.0)
+    # reconstructed_img = upscale_net(reconstructed_img)
 
     img = img * 255
     img = img.data.cpu().numpy().transpose(0, 2, 3, 1)
@@ -70,28 +83,33 @@ def validation(img, name, save_imgs=False, save_dir=None):
 
     if save_imgs and save_dir:
         img = Image.fromarray(orig_img)
-        img.save(os.path.join(save_dir, name + '_orig.png'))
+        img.save(os.path.join(save_dir, name + "_orig.png"))
 
         img = Image.fromarray(downscaled_img)
-        img.save(os.path.join(save_dir, name + '_down.png'))
+        img.save(os.path.join(save_dir, name + "_down.png"))
 
         img = Image.fromarray(recon_img)
-        img.save(os.path.join(save_dir, name + '_recon.png'))
+        img.save(os.path.join(save_dir, name + "_recon.png"))
 
-    psnr = utils.cal_psnr(orig_img[SCALE:-SCALE, SCALE:-SCALE, ...], recon_img[SCALE:-SCALE, SCALE:-SCALE, ...], benchmark=BENCHMARK)
+    # psnr = utils.cal_psnr(
+    #     orig_img[SCALE:-SCALE, SCALE:-SCALE, ...],
+    #     recon_img[SCALE:-SCALE, SCALE:-SCALE, ...],
+    #     benchmark=BENCHMARK,
+    # )
 
     orig_img_y = rgb2ycbcr(orig_img)[:, :, 0]
     recon_img_y = rgb2ycbcr(recon_img)[:, :, 0]
     orig_img_y = orig_img_y[SCALE:-SCALE, SCALE:-SCALE, ...]
     recon_img_y = recon_img_y[SCALE:-SCALE, SCALE:-SCALE, ...]
 
-    ssim = utils.calc_ssim(recon_img_y, orig_img_y)
+    # ssim = utils.calc_ssim(recon_img_y, orig_img_y)
 
-    return psnr, ssim
+    # return
+    pass
 
 
-if __name__ == '__main__':
-    img_list = glob(os.path.join(args.img_dir, '**', '*.png'), recursive=True)
+if __name__ == "__main__":
+    img_list = glob(os.path.join(args.img_dir, "**", "*.png"), recursive=True)
     assert len(img_list) > 0
 
     if not os.path.exists(args.output_dir):
@@ -105,9 +123,9 @@ if __name__ == '__main__':
 
         img = utils.load_img(img_file)
 
-        psnr, ssim = validation(img, name, save_imgs=True, save_dir=args.output_dir)
-        psnr_list.append(psnr)
-        ssim_list.append(ssim)
+        validation(img, name, save_imgs=True, save_dir=args.output_dir)
+    #     psnr_list.append(psnr)
+    #     ssim_list.append(ssim)
 
-    print('Mean PSNR: {0:.2f}'.format(np.mean(psnr_list)))
-    print('Mean SSIM: {0:.4f}'.format(np.mean(ssim_list)))
+    # print("Mean PSNR: {0:.2f}".format(np.mean(psnr_list)))
+    # print("Mean SSIM: {0:.4f}".format(np.mean(ssim_list)))
